@@ -1,0 +1,45 @@
+# Byte-compiled / optimized / DLLs for Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.egg-info/
+instance/
+parts/
+sdist/
+var/
+*.egg
+*.tmp
+
+# PyInstaller
+#  Usually these files are written by a non-Python program, so we can't use #  *.py[co] to exclude them.
+*.manifest
+*.spec
+
+# Logs and databases
+*.log
+*.sqlite3
+
+# Virtual environment
+venv/
+env/
+
+# IDE specific
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# OS generated files
+.DS_Store
+Thumbs.db
