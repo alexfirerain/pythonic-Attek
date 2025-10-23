@@ -210,6 +210,7 @@ def add_expense(amount: float, category: str) -> None:
     :param amount: величина новой траты в у.е.
     :param category: категория новой траты
     """
+    global categories, amounts
     if not amount or not category:
         print('неправильный ввод')
     if not category in categories:
@@ -222,17 +223,27 @@ def add_expense(amount: float, category: str) -> None:
 
 def calculate_total() -> float:
     """
-    Вычисляет общую сумму трат по всем категориям.
+    Вычисляет общую сумму трат по всем категориям,
+    используя предопределённый список `amounts`.
     :return:
     """
     return sum(amounts)
 
 
 def get_category_total(category: str) -> float:
+    """
+    Возвращает текущую сумму трат по указанной категории.
+    :param category: название категории, по которой сообщается сумма.
+    :return: сумму трат по указанной категории
+    """
     return amounts[categories.index(category)]
 
 
 def get_statistics() -> None:
+    """
+    Выводит на терминал перечень всех категорий из списка `categories`
+    с соответствующими им сумма трат из списка `amounts`.
+    """
     for i in range(len(categories)):
         print(f'{categories[i]}: {amounts[i]}')
 
@@ -294,6 +305,12 @@ computer_won = 0
 
 
 def get_user_choice() -> str:
+    """
+    Запрашивает у пользователя ввод одного из игровых слов, предопределённых
+    в списке `items`. Если ввод пользователя не соответствует списку,
+    добивается ввода корректного варианта.
+    :return:
+    """
     choice = input("Камень, ножницы, бумага, раз-два-три: ").strip().lower()
     while choice not in items:
         choice = input('Допустимый ввод: "камень", "ножницы", "бумага". Ваш ход: ').strip().lower()
@@ -301,10 +318,21 @@ def get_user_choice() -> str:
 
 
 def get_computer_choice() -> str:
+    """
+    Имитирует случайный выбор игрового слова компутером.
+    :return: случайное слово из предопределённого списка `items`
+    """
     return random.choice(items)
 
 
 def determinate_winner(user: str, computer: str) -> str:
+    """
+    Определяет победителя в Игре "Камень-Ножницы-Бумага" по стандартным правилам.
+    Обновляет глобальные переменные статистики: `games_played`, `user_won`, `computer_won`.
+    :param user: игровое слово, выбранное пользователем
+    :param computer: игровое слово, выбранное ЭВМ
+    :return: строку, сообщающую исход противостояния
+    """
     global games_played, user_won, computer_won
     result = None
     if user == computer:
@@ -335,7 +363,10 @@ def determinate_winner(user: str, computer: str) -> str:
 
 
 def show_statistics() -> None:
-    global games_played, user_won, computer_won
+    """
+    Выводит на терминал статистику по играм: сколько сыграно,
+    сколько выиграно пользователем, и сколько проиграно (то есть выиграно машиной).
+    """
     print(f"""        Игр сыграно: {games_played}
         Выиграно: {user_won}
         Проиграно: {computer_won}
@@ -343,6 +374,17 @@ def show_statistics() -> None:
 
 
 def play_game() -> None:
+    """
+    Реализует игровой процесс "Камень-Ножницы-Бумага":
+    Выводит приветствие. Запрашивает желание сыграть:
+    "нет" в любом регистре трактуется как отказ (выводится прощание
+    и статистика), "статистика" выводит статистику игр, "справка" по
+    идее выводит все вот эти инструкции, любой другой вариант трактуется
+    как согласие на новый раунд игры.
+    Раунд состоит в запросе ввода слова пользователя, генерации слова
+    компутера, их сопоставлении согласно игровой механике и сообщении
+    об исходе раунда.
+    """
     print("Игра Камень-Ножницы-Бумага")
     while True:
         ready_to_play = input("Хотите сыграть? (да/нет): ").strip().lower()
@@ -379,18 +421,37 @@ student_names = []
 student_grades = []
 
 def add_student(name: str, grades: list[int]) -> None:
+    """
+    Добавляет данные об учащемся, занося его имя и список оценок
+    в соответствующие глобальные списки `student_names` и `student_grades`.
+    :param name: идентификатор учащегося, повторное добавление имени создаёт
+    новую запись, однако практически доступна будет только первая запись,
+    поэтому пользователь должен сам следить за уникальностью этого ключа.
+    :param grades: список оценок данного учащегося
+    """
     global student_names, student_grades
     student_names.append(name)
     student_grades.append(grades)
 
 def calculate_average_grade(name: str) -> float:
+    """
+    Вычисляет средний бал для указанного учащегося.
+    Если указан учащийся, отсутствующий в предопределённом списке `student_names`,
+    вздымается ValueError.
+    :param name: имя учащегося
+    :return: средний балл по оценкам указанного учащегося
+    """
     # использует функцию `calculate_average(numbers)`, определённую в задании 6.6
-    global student_names, student_grades
     grades = student_grades[student_names.index(name)]
     return calculate_average(grades)
 
 def find_best_student() -> list[str]:
-    global student_names, student_grades
+    """
+    Вычисляет средний балл для каждого учащегося и возвращает
+    список учащихся, чей средний балл максимальный среди членов списка `student_names`.
+    :return: список с одним или несколькими учащимися с лучшим средним баллом;
+     пустой список, если предопределённый список `student_names` пуст.
+    """
     average_grades = list(map(calculate_average_grade, student_names))
     best_average_grade = find_max(average_grades)
     best_students = []
@@ -400,7 +461,10 @@ def find_best_student() -> list[str]:
     return best_students
 
 def get_statistics() -> None:
-    global student_names, student_grades
+    """
+    Выводит на терминал статистику по всем учащимся: имя и средний балл, а также
+    средний балл по группе.
+    """
     for i in range(len(student_names)):
         print(f'{student_names[i]}: {student_grades[i]} - средний балл: {calculate_average_grade(student_names[i])}')
     print(f'Средний балл по группе {calculate_average([grade for grades in student_grades for grade in grades])}')
