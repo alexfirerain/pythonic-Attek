@@ -11,7 +11,13 @@ task66 = """
 print(task66)
 
 
-def find_max(numbers):
+def find_max(numbers: list[int | float]) -> int | float | None:
+    """
+    Находит наибольшее (ближайшее к положительной бесконечности) число в списке.
+    Если чисел, равных наибольшему, в списке несколько, возвращается первое из них.
+    :param numbers: список целых или вещественных чисел
+    :return: первое наибольшее число соответствующего типа из списка; None, если список пуст
+    """
     maximum = None
     if numbers:
         maximum = float('-inf')
@@ -21,7 +27,13 @@ def find_max(numbers):
     return maximum
 
 
-def find_min(numbers):
+def find_min(numbers: list[int | float]) -> int | float | None:
+    """
+    Находит наименьшее (ближайшее к отрицательной бесконечности) число в списке.
+    Если чисел, равных наименьшему, в списке несколько, возвращается первое из них.
+    :param numbers: cписок целых или вещественных чисел
+    :return: перове наименьшее число соответствующего типа из списка; None, если список пуст
+    """
     minimum = None
     if numbers:
         minimum = float('inf')
@@ -31,7 +43,12 @@ def find_min(numbers):
     return minimum
 
 
-def calculate_average(numbers):
+def calculate_average(numbers: list[int | float]) -> float | None:
+    """
+    Вычисляет среднее значение чисел в списке
+    :param numbers: cписок целых или вещественных чисел
+    :return: cреднее арифметическое значение чисел из списка; None, если список пуст
+    """
     average = None
     if numbers:
         total = 0
@@ -41,7 +58,12 @@ def calculate_average(numbers):
     return average
 
 
-def count_even(numbers):
+def count_even(numbers: list[int]) -> int:
+    """
+    Подсчитывает количество чётных чисел в списке (т.е. таких чисел, которые делятся на 2 без остатка)
+    :param numbers: список целых чисел
+    :return: количество чётных чисел в списке; 0, если список пуст
+    """
     even_amount = 0
     if numbers:
         for number in numbers:
@@ -74,12 +96,26 @@ task67 = """
 print(task67)
 
 
-def count_words(text):
+def count_words(text: str) -> int:
+    """
+    Прикидывает количество слов в тексте (словом считается последовательность символов,
+     отделённая от других любым количеством символов, считающихся в Питоне пробельными)
+    :param text: анализируемый текст
+    :return: количество слов в тексте; 0, если строка пуста
+    """
     return len(text.split())
 
 
-def find_longest_word(text):
-    if not text or len(text) == 0:
+def find_longest_word(text: str) -> str | None:
+    """
+    Находит самое длинное слово в тексте (словом считается последовательность
+     любых непробельных символов, отделённая от других пробельными).
+     Если таких слов несколько, возвращается первое из них.
+    :param text: анализируемый текст
+    :return: cамую длинную в текст непрерывную последовательность символов;
+     None, если строка пуста или не содержит букв.
+    """
+    if not text or not any(symbol.isalpha() for symbol in text):
         return None
     words = text.split()
     word_lengths = []
@@ -88,15 +124,29 @@ def find_longest_word(text):
     return words[word_lengths.index(find_max(word_lengths))]
 
 
-def count_sentences(text):
-    if not text or len(text) == 0:
+def count_sentences(text: str) -> int:
+    """
+    Подсчитывает количество предложений в тексте (предложением считается последовательность
+    любых символов, разделённая точкой (согласно ТЗ).
+    :param text: анализируемый текст
+    :return: количество предложений в тексте; точнее количество точек в тексте + 1;
+    0, если строка пуста или не содержит букв; 1, если в текст нет точек.
+    """
+    if not text or not any(symbol.isalpha() for symbol in text):
         return 0
     sentences = text.split('.')
     return len(sentences)
 
 
-def calculate_readability(text):
-    if not text or len(text) == 0:
+def calculate_readability(text: str) -> float | None:
+    """
+    Вычисляет индекс читаемости текста (читабельность), фактически равный
+    средней длине слова в тексте (словом считается последовательность любых символов,
+    отделённая от других пробельными).
+    :param text: анализируемый текст
+    :return: находит среднюю длину слова в тексте; 0, если строка пуста или не содержит букв
+    """
+    if not text or not any(symbol.isalpha() for symbol in text):
         return None
     readability = 0
     words = text.split()
@@ -150,7 +200,16 @@ categories = []
 amounts = []
 
 
-def add_expense(amount, category):
+def add_expense(amount: float, category: str) -> None:
+    """
+    Фиксирует единичную трату в определённой категории.
+    Использует предопределённые глобальные списки `categories` и `amounts`.
+    Категория из списка `categories` соотносится с суммой трат в списке `amounts` по индексу.
+    Если добавляемая категория не была ранее определена, она добавляется в список категорий.
+    Если категория уже определена, то новая трата добавляется к сумме.
+    :param amount: величина новой траты в у.е.
+    :param category: категория новой траты
+    """
     if not amount or not category:
         print('неправильный ввод')
     if not category in categories:
@@ -161,19 +220,25 @@ def add_expense(amount, category):
         amounts[categories.index(category)] += float(amount)
 
 
-def calculate_total():
+def calculate_total() -> float:
+    """
+    Вычисляет общую сумму трат по всем категориям.
+    :return:
+    """
     return sum(amounts)
 
 
-def get_category_total(category):
+def get_category_total(category: str) -> float:
     return amounts[categories.index(category)]
 
 
-def get_statistics():
+def get_statistics() -> None:
     for i in range(len(categories)):
         print(f'{categories[i]}: {amounts[i]}')
 
-
+"""
+Собственно скрипт программы Личный Финансовый Помощник
+"""
 print("Добро пожаловать в ваш Личный Финансовый Помощник")
 print("""
 Доступные команды:
@@ -228,18 +293,18 @@ user_won = 0
 computer_won = 0
 
 
-def get_user_choice():
+def get_user_choice() -> str:
     choice = input("Камень, ножницы, бумага, раз-два-три: ").strip().lower()
     while choice not in items:
         choice = input('Допустимый ввод: "камень", "ножницы", "бумага". Ваш ход: ').strip().lower()
     return choice
 
 
-def get_computer_choice():
+def get_computer_choice() -> str:
     return random.choice(items)
 
 
-def determinate_winner(user, computer):
+def determinate_winner(user: str, computer: str) -> str:
     global games_played, user_won, computer_won
     result = None
     if user == computer:
@@ -269,7 +334,7 @@ def determinate_winner(user, computer):
     return result
 
 
-def show_statistics():
+def show_statistics() -> None:
     global games_played, user_won, computer_won
     print(f"""        Игр сыграно: {games_played}
         Выиграно: {user_won}
@@ -277,7 +342,7 @@ def show_statistics():
     """)
 
 
-def play_game():
+def play_game() -> None:
     print("Игра Камень-Ножницы-Бумага")
     while True:
         ready_to_play = input("Хотите сыграть? (да/нет): ").strip().lower()
@@ -295,7 +360,7 @@ def play_game():
             print(f"Вы выбрали {user_choice}, компьютер выбрал {computer_choice}")
             print(determinate_winner(user_choice, computer_choice))
 
-
+# собственно игра в Камень-Ножницы-Бумага
 play_game()
 
 
@@ -313,20 +378,18 @@ print(task73)
 student_names = []
 student_grades = []
 
-def add_student(name, grades):
+def add_student(name: str, grades: list[int]) -> None:
     global student_names, student_grades
     student_names.append(name)
-    student_grades.append([])
-    for grade in grades:
-        student_grades[student_names.index(name)].append(grade)
+    student_grades.append(grades)
 
-def calculate_average_grade(name):
+def calculate_average_grade(name: str) -> float:
     # использует функцию `calculate_average(numbers)`, определённую в задании 6.6
     global student_names, student_grades
     grades = student_grades[student_names.index(name)]
     return calculate_average(grades)
 
-def find_best_student():
+def find_best_student() -> list[str]:
     global student_names, student_grades
     average_grades = list(map(calculate_average_grade, student_names))
     best_average_grade = find_max(average_grades)
@@ -336,13 +399,15 @@ def find_best_student():
             best_students.append(student_names[i])
     return best_students
 
-def get_statistics():
+def get_statistics() -> None:
     global student_names, student_grades
     for i in range(len(student_names)):
         print(f'{student_names[i]}: {student_grades[i]} - средний балл: {calculate_average_grade(student_names[i])}')
     print(f'Средний балл по группе {calculate_average([grade for grades in student_grades for grade in grades])}')
 
-
+"""
+Собственно скрипт системы управления студентами
+"""
 print("Добро пожаловать в систему управления студентами")
 while True:
     command = input()
