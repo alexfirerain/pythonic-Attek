@@ -270,7 +270,7 @@ while True:
             print('Неправильный ввод')
             continue
         add_expense(float(commit[2]), commit[1])
-        print(f'Трата {commit[1]} добавлена в {commit[2]}')
+        print(f'Трата {commit[2]} добавлена в {commit[1]}')
     elif command == '=':
         print(f'Общая сумма трат: {calculate_total()}')
     elif command == '==':
@@ -283,8 +283,9 @@ while True:
             continue
         category = commit[0]
         if category not in categories:
-            add_expense(0, category)
-        print(f'траты по категории {category}: {get_category_total(category)}')
+            print(f'категория "{category}" не определена')
+        else:
+            print(f'траты по категории {category}: {get_category_total(category)}')
 
 task72 = """
 Задание 7.2: Мини-игра "Камень, ножницы, бумага"
@@ -483,8 +484,10 @@ while True:
     elif command.startswith("среднее для"):
         delimiter = command.index(":")
         student = command[(delimiter + 1):].strip()
-        print(student)
-        print(f'у {student} средний балл {calculate_average(student_grades[student_names.index(student)])}')
+        if not student in student_names:
+            print(f'Студента {student} нет в списке')
+        else:
+            print(f'у {student} средний балл {calculate_average(student_grades[student_names.index(student)])}')
     if command == "лучший":
         print(f'лучший по среднему баллу студент: {find_best_student()}')
     if command == "статистика":
