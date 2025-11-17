@@ -1,0 +1,260 @@
+from __future__ import annotations
+from typing import List, Iterator
+from dataclasses import dataclass
+import math
+
+from astrowidja.utils.celestial import CIRCLE
+
+@dataclass(frozen=True)
+class Harmonics:
+    """
+    Класс, представляющий гармоническое число (номер гармоники).
+    Хранит номинал и его разложение на простые множители.
+    """
+    number: int
+    """
+    Номинал: какому числу кратность задаёт гармонику.
+    """
+
+    multipliers: List[int]
+    """
+    Простые множители (не считая Единицы), в произведении дающие это число.
+    Отсортированы от большего к меньшему.
+    """
+
+    def __init__(self, number: int):
+        if number < 0:
+            raise ValueError("Гармоники определены только для неотрицательных чисел.")
+        object.__setattr__(self, 'number', number)
+        object.__setattr__(self, 'multipliers', self.multipliers_explicate(number))
+
+    @staticmethod
+    def multipliers_explicate(number: int) -> List[int]:
+        """
+        Выдаёт список множителей данного числа (не считая единицы).
+        Например, для 10 → [2, 5], для 11 → [11], для 12 → [2, 2, 3].
+
+        :param number: неотрицательное число, разлагаемое на множители.
+        :return: список неравных единице множителей, отсортированных по убыванию.
+        :raises ValueError: если аргумент отрицательный.
+        """
+        if number < 0:
+            raise ValueError("функция работает с положительными числами")
+        if number == 0:
+            return [0]
+        if number == 1:
+            return [1]
+
+        multipliers = []
+        divider = 2
+        n = number
+        while n > 1:
+            if divider > n // divider:
+                multipliers.append(n)
+                break
+            if n % divider == 0:
+                multipliers.append(divider)
+                n //= divider
+            else:
+                divider += 1
+
+        multipliers.sort(reverse=True)
+        return multipliers
+
+    @staticmethod
+    def find_multiplier(resonance: int, arc: float, orb: float) -> int:
+        """
+        Вспомогательный метод нахождения кратного аспекта в заданной гармонике.
+
+        :param resonance: какая гармоника анализируется.
+        :param arc: анализируемая дуга.
+        :param orb: первичный орбис, используемый при расчёте аспектов.
+        :return: множитель аспекта заданной гармоники для заданной дуги.
+        """
+        single = CIRCLE / resonance
+        multiplier = 1
+        orb_here = orb / resonance
+        # Проверяем до половины круга (гармоники симметричны)
+        while multiplier <= resonance // 2:
+            if abs(single * multiplier - arc) < orb_here:
+                break
+            multiplier += 1
+        return multiplier
+
+    @staticmethod
+    def multi_sum(number: int) -> int:
+        """Возвращает сумму простых множителей числа."""
+        return sum(Harmonics.multipliers_explicate(number))
+
+    @staticmethod
+    def format_multipliers(multipliers: List[int]) -> str:
+        """
+        Форматирует список множителей в строку вида <2x3x5>.
+        """
+        return f"<{'x'.join(map(str, multipliers))}>"
+
+    @staticmethod
+    def is_multiplied(harmonic: int, numeric: int) -> bool:
+        """
+        Проверяет, содержит ли разложение гармоники указанный множитель.
+
+        :param harmonic: гармоника, которую проверяем.
+        :param numeric: множитель, который ищем.
+        :return: True, если harmonic делится на numeric и numeric — один из простых множителей.
+        """
+        return numeric in Harmonics.multipliers_explicate(harmonic)
+
+    @staticmethod
+    def is_multiple(number: int, multiplier: int) -> bool:
+        """
+        Проверяет, делится ли number на multiplier без остатка.
+        """
+        return number % multiplier == 0
+
+    def get_multipliers(self) -> List[int]:
+        """Возвращает список простых множителей (неизменяемый)."""
+        return self.multipliers.copy()
+
+    def is_simple(self) -> bool:
+        """Сообщает, является ли гармоника простым числом."""
+        return self.complexity() == 1
+
+    def complexity(self) -> int:
+        """Возвращает количество простых множителей (сложность числа)."""
+        return len(self.multipliers)
+
+    def get_single_pure_arc(self) -> float:
+        """
+        Возвращает длину дуги в градусах, соответствующую единичной кратности Круга.
+        Т.е. длину "зодиака" в данной гармонике.
+        """
+        if self.number == 0:
+            return 0.0
+        return self._normalize_arc(CIRCLE / self.number)
+
+    def multipliers_sum(self) -> int:
+        """Возвращает сумму множителей (гармонический корень)."""
+        return sum(self.multipliers)
+
+    def _normalize_arc(self, arc: float) -> float:
+        """Нормализует дугу в диапазон [0, 360)."""
+        return arc % CIRCLE
+
+    def double_value(self) -> float:
+        """Возвращает номинал как double."""
+        return float(self.number)
+
+    def long_value(self) -> int:
+        """Возвращает номинал как long."""
+        return self.number
+
+    def int_value(self) -> int:
+        """Возвращает номинал как int."""
+        return self.number
+
+    def float_value(self) -> float:
+        """Возвращает номинал как float."""
+        return float(self.number)
+
+    def compare_to(self, other: Harmonics) -> int:
+        """Сравнивает с другой гармоникой."""
+        return self.number - other.number
+
+    def get_next(self) -> Harmonics:
+        """Возвращает следующую гармонику (number + 1)."""
+        return Harmonics(self.number + 1)
+
+    @staticmethod
+    def generate_up_to(ultimate_harmonic: int) -> List[Harmonics]:
+        """
+        Создаёт список гармоник от 1 до указанной включительно.
+        """
+        return list(Harmonics.stream_up_to(ultimate_harmonic))
+
+    @staticmethod
+    def stream_up_to(ultimate_harmonic: int) -> Iterator[Harmonics]:
+        """
+        Генерирует поток гармоник от 1 до указанной.
+        """
+        return (Harmonics(i) for i in range(1, ultimate_harmonic + 1))
+
+    @staticmethod
+    def build_heavens(upto_number: int) -> None:
+        """
+        Строит отчёт о "небесах" — группах гармоник, сгруппированных по простым множителям.
+        Аналог оригинального метода buildHeavens.
+        """
+        report = []
+        heaven = 0
+
+        i = 1
+        while i <= upto_number:
+            if len(Harmonics.multipliers_explicate(i)) == 1:
+                heaven_builder = []
+                n = 0
+                heaven_sum = 0
+
+                # Первая гармоника (простая)
+                multi = Harmonics.multipliers_explicate(i)
+                heaven_builder.append(f"\t{Harmonics.format_multipliers(multi)} Σ = {Harmonics.multi_sum(i)} (сложность {len(multi)})")
+                n += 1
+                heaven_sum += Harmonics.multi_sum(i)
+                i += 1
+
+                # Добавляем составные, пока не встретим следующую простую
+                while i <= upto_number and len(Harmonics.multipliers_explicate(i)) > 1:
+                    next_multi = Harmonics.multipliers_explicate(i)
+                    heaven_builder.append(f"\t{Harmonics.format_multipliers(next_multi)} Σ = {Harmonics.multi_sum(i)} (сложность {len(next_multi)})")
+                    n += 1
+                    heaven_sum += Harmonics.multi_sum(i)
+                    i += 1
+
+                if n > 0:
+                    avg_height = heaven_sum / n
+                    report.append(f"Небо №{heaven} (высота = {avg_height:.2f})")
+                    report.extend(heaven_builder)
+                    heaven += 1
+            else:
+                i += 1
+
+        print("\n".join(report))
+
+    @staticmethod
+    def build_heavens_with_harmonics(upto_number: int) -> None:
+        """
+        Альтернативная версия buildHeavens, использующая экземпляры Harmonics.
+        """
+        report = []
+        heaven_builder = []
+        n = 0
+        heaven_sum = 0
+        heaven = 0
+
+        for h in Harmonics.generate_up_to(upto_number):
+            if h.is_simple():
+                if heaven_builder:
+                    avg_height = heaven_sum / n
+                    report.append(f"Небо №{heaven} (высота = {avg_height:.2f})")
+                    report.extend(heaven_builder)
+                    heaven += 1
+                # Сброс
+                heaven_builder = [f"\t{Harmonics.format_multipliers(h.get_multipliers())} Σ = {h.multipliers_sum()} (сложность {h.complexity()})"]
+                n = 1
+                heaven_sum = h.multipliers_sum()
+            else:
+                heaven_builder.append(f"\t{Harmonics.format_multipliers(h.get_multipliers())} Σ = {h.multipliers_sum()} (сложность {h.complexity()})")
+                n += 1
+                heaven_sum += h.multipliers_sum()
+
+        if heaven_builder:
+            avg_height = heaven_sum / n
+            report.append(f"Небо №{heaven} (высота = {avg_height:.2f})")
+            report.extend(heaven_builder)
+
+        print("\n".join(report))
+
+    def __str__(self) -> str:
+        return f"Гармоника({self.number}, множители={self.format_multipliers(self.multipliers)})"
+
+    def __repr__(self) -> str:
+        return self.__str__()

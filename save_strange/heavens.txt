@@ -1,0 +1,195 @@
+from typing import List, Optional, Any
+from abc import ABC, abstractmethod
+from ..model.celestial_objects import Astra
+
+
+class ChartObject(ABC):
+    """
+    Абстрактный базовый класс для объектов, представляющих астрологические карты.
+    Аналог sealed-класса ChartObject из Java.
+    """
+
+    def __init__(self, name: str):
+        """
+        Конструктор объекта карты.
+        :param name: имя объекта карты.
+        """
+        self._name: str = name
+
+    @property
+    def name(self) -> str:
+        """Геттер имени."""
+        return self._name
+
+    @name.setter
+    def name(self, value: str) -> None:
+        """Сеттер имени."""
+        self._name = value
+
+    @abstractmethod
+    def get_data(self) -> List['Chart']:
+        """
+        Возвращает список карт, содержащихся в этом объекте.
+        Для обычной карты — это список с одной картой.
+        """
+        pass
+
+    @abstractmethod
+    def get_dimension(self) -> int:
+        """
+        Возвращает размерность объекта:
+        1 для простой карты, N для мультикарты.
+        """
+        pass
+
+    def get_shortened_name(self, limit: int) -> str:
+        """
+        Возвращает имя, усечённое до указанного предела.
+        Если имя длиннее limit, добавляется "…".
+        :param limit: максимальная длина строки.
+        :return: усечённое имя.
+        """
+        if len(self._name) <= limit:
+            return self._name
+        return self._name[:limit - 1] + "…"
+
+    # def get_caption(self, width: int = 30, border_char: str = '*') -> str:
+    #     """
+    #     Возвращает имя в рамке.
+    #     :param width: ширина рамки.
+    #     :param border_char: символ рамки.
+    #     :return: оформленный заголовок.
+    #     """
+    #     from astrowidja.utils.decorator import frame_text
+    #     return frame_text(self._name, width, border_char)
+
+    @abstractmethod
+    def get_astras_list(self) -> str:
+        """
+        Возвращает строку со списком астр в читаемом виде.
+        """
+        pass
+
+    @abstractmethod
+    def to_storing_string(self) -> str:
+        """
+        Возвращает строку в формате, пригодном для сохранения в DAW-файл:
+        - Первая строка: #имя_карты
+        - Далее — строки с положением астр (Astra.get_string())
+        - В конце — пустая строка.
+        """
+        pass
+
+
+class Chart(ChartObject):
+    """
+    Класс, представляющий астрологическую карту.
+    Содержит список астр и наследуется от ChartObject.
+    """
+
+    def __init__(self, name: str, astra_list: List[Astra] = None):
+        """
+        Конструктор карты по имени и, опционально, списку астр.
+        :param name: имя карты.
+        :param astra_list: список астр, которые нужно добавить.
+        """
+        super().__init__(name)
+        self._astras: List[Astra] = []
+        if astra_list:
+            for astra in astra_list:
+                self.add_astra(astra)
+
+    @classmethod
+    def read_from_string(cls, input_str: str) -> 'Chart':
+        """
+        Создаёт карту из строки, где первая строка — имя карты,
+        а последующие — описания астр (по одной на строку).
+        Пустые строки и строки с // игнорируются.
+        :param input_str: входная строка.
+        :return: созданная карта.
+        """
+        lines = [line.strip() for line in input_str.strip().splitlines()]
+        if not lines:
+            raise ValueError("текст не содержит строк")
+
+        name = lines[0]
+        astras = []
+        for line in lines[1:]:
+            if not line or line.startswith("//"):
+                continue
+            try:
+                astra = Astra.read_from_string(line)
+                astras.append(astra)
+            except Exception as e:
+                print(f"Не удалось распознать строку астры: {line} — {e}")
+        return cls(name, astras)
+
+    def get_data(self) -> List['Chart']:
+        """
+        Возвращает эту карту как одиночный элемент.
+        Аналог метода getData() в Java.
+        """
+        return [self]
+
+    # def get_astras_list(self) -> str:
+    #     """
+    #     Возвращает строковое представление списка астр в зодиакальном формате.
+    #     """
+    #     from astrowidja.utils.mechanics import zodiac_format
+    #     result = f"\tЗодиакальные позиции ({self.get_name()}):\t\n"
+    #     for astra in self._astras:
+    #         result += f"{astra.get_name_with_zodiac_degree():>15}\t {zodiac_format(astra.get_zodiac_position())}\n"
+    #     return result
+
+    def to_storing_string(self) -> str:
+        """
+        Возвращает строку, пригодную для сохранения в файл.
+        Формат: #имя_карты, затем построчно данные астр (как в getString),
+        в конце — пустая строка.
+        """
+        if not self._astras:
+            return f"#{self.get_name()}\n"
+        astras_str = "".join(astra.get_string() for astra in self._astras)
+        return f"#{self.get_name()}\n{astras_str}\n"
+
+    def get_dimension(self) -> int:
+        """
+        Возвращает размерность объекта карты — 1.
+        """
+        return 1
+
+    def add_astra(self, astra: Astra) -> None:
+        """
+        Добавляет астру в карту. Если астра с таким именем уже есть,
+        она заменяется. Устанавливает карту как 'небо' для астры.
+        :param astra: добавляемая астра.
+        """
+        astra.set_heaven(self)
+        for i, existing in enumerate(self._astras):
+            if existing.get_name() == astra.get_name():
+                self._astras[i] = astra
+                return
+        self._astras.append(astra)
+
+    def get_astra(self, name: str) -> Optional[Astra]:
+        """
+        Возвращает астру по имени.
+        :param name: имя астры.
+        :return: найденная астра или None.
+        """
+        for astra in self._astras:
+            if astra.get_name() == name:
+                return astra
+        return None
+
+    def get_astras(self) -> List[Astra]:
+        """
+        Возвращает неизменяемый список астр.
+        """
+        return self._astras.copy()
+
+    def __str__(self) -> str:
+        return f"Chart({self.get_name()}, астр: {len(self._astras)})"
+
+    def __repr__(self) -> str:
+        return self.__str__()

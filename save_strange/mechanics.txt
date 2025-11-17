@@ -1,0 +1,191 @@
+from typing import List, Collection
+from math import modf, ceil
+
+# Пример импорта классов (замените на реальные импорты из вашего проекта)
+from astrowidja.config import primal_orb, half_orbs_for_doubles
+from astrowidja.model.celestial_objects import Astra, of_same_heaven
+from astrowidja.utils.celestial import CIRCLE, HALF_CIRCLE, coor, ZodiacPoint, ZodiacSign, ZodiacPosition, \
+    SignedZodiacPosition
+
+
+# def norm_coor(position: float) -> float:
+#     """
+#     Приводит координату (или дугу) к диапазону [0, 360).
+#     """
+#     return position % CIRCLE
+
+
+def define_arc(a: float | ZodiacPoint, b: float | ZodiacPoint) -> float:
+    """
+    Вычисляет эклиптическую дугу между двумя точками на большом круге (в диапазоне [0, 180]).
+
+    :param a: Первая точка (в градусах или объектом ZodiacPoint).
+    :param b: Вторая точка (в градусах или объектом ZodiacPoint).
+    :return: Наименьшую дугу между указанными точками (от 0° до 180°).
+    """
+    arc = abs(coor(a) - coor(b))
+    return arc if arc <= HALF_CIRCLE else CIRCLE - arc
+
+
+def define_vector_arc(a: float | ZodiacPoint, b: float | ZodiacPoint) -> float:
+    """
+    Возвращает направленную дугу от первой точки ко второй в направлении счёта градусов.
+    :param a: Первая точка (в градусах или объектом ZodiacPoint).
+    :param b: Вторая точка (в градусах или объектом ZodiacPoint).
+    :return: Дуговое расстояние от первой точки до второй в диапазоне [0, 360) градусов.
+    """
+    return (coor(b) - coor(a)) % CIRCLE
+
+
+def find_median(position_a: float | ZodiacPoint, position_b: float | ZodiacPoint) -> float:
+    """
+    Находит среднюю координату (мидпойнт) между двумя точками.
+    Если дуга меж точками равна 180°, возвращает координату точки с той стороны,
+    через которую проходит движение от первой к второй.
+    :param position_a: Первая точка (в градусах или объектом ZodiacPoint).
+    :param position_b: Вторая точка (в градусах или объектом ZodiacPoint).
+    :return: Координата средней точки между двумя точками, в диапазоне [0, 360).
+    """
+    median = coor((position_a + position_b) / 2)
+    if define_vector_arc(position_a, median) > HALF_CIRCLE / 2:
+        return coor(median - HALF_CIRCLE)
+    return median
+
+
+def zodiac_degree(ecliptic_longitude: float) -> str:
+    """
+    Возвращает строковое представление зодиакального градуса координаты.
+
+    Пример:
+     >>> zodiac_degree(12)
+     13°♈
+     >>> zodiac_degree(125.5)
+     6°♌
+
+    :param ecliptic_longitude: Зодиакальная долгота в градусах.
+    :return: Строковое представление зодиакального градуса.
+
+    """
+    zodium, degree = divmod(coor(ecliptic_longitude), 30)
+    return f"{int(degree) + 1}°{ZodiacSign.icon_for_zodium(int(zodium) + 1)}"
+
+
+def coordinate_to_position(ecliptic_longitude: float) -> ZodiacPosition:
+    """
+    Преобразует дугу в кортеж (градусы Зодиака, минуты, секунды).
+    """
+    degrees, fractional = modf(ecliptic_longitude)
+    minutes, seconds = modf(fractional * 60)
+    return ZodiacPosition(
+        int(degrees),
+        int(minutes),
+        int(ceil(seconds * 60))
+    )
+
+
+def coordinate_to_signed_position(ecliptic_longitude: float) -> SignedZodiacPosition:
+    """
+    Возвращает кортеж из компонентов зодиакальной координаты
+    (знак зодиака, градусы, минуты, секунды).
+    Где зодий представлен номером от 1 до 12.
+    """
+    dd, mm, ss = coordinate_to_position(ecliptic_longitude)
+    sign = dd // 30 + 1
+    return SignedZodiacPosition(sign, dd % 30, mm, ss)
+
+
+def is_ahead(from_coord: float | ZodiacPoint, coord: float | ZodiacPoint) -> bool:
+    """
+    Проверяет, находится ли вторая координата в первой половине круга от первой по ходу градусов.
+    Если координаты равны, возвращает True, если они противоположны, то False.
+    :param from_coord: Первая координата (в градусах или объектом ZodiacPoint).
+    :param coord: Вторая координата (в градусах или объектом ZodiacPoint).
+    :return: True, если вторая координата находится впереди первой
+        по ходу градусов на от 0° (включительно) до 180° (не включительно). Иначе False.
+    """
+    delta = coor(coord) - coor(from_coord)
+    return (0 <= delta < HALF_CIRCLE) or delta < -HALF_CIRCLE
+
+
+def get_arc_for_harmonic(a: ZodiacPoint, b: ZodiacPoint, harmonic: int) -> float:
+    """
+    Расстояние между астрами в гармонике.
+    """
+    return coor(define_arc(a, b) * harmonic)
+
+
+def calculate_strength(orb: float, clearance: float) -> float:
+    """
+    Вычисляет силу аспекта в процентах.
+    """
+    delta = orb - clearance
+    if delta >= 0:
+        return delta / orb * 100
+    else:
+        return delta / (HALF_CIRCLE - orb) * 100
+
+
+def are_conjuncted(a: Astra, b: Astra) -> bool:
+    """
+    Проверяет, находятся ли астры в соединении (в одной карте).
+    """
+    return of_same_heaven(a, b) and define_arc(a, b) <= primal_orb
+
+
+def conjuncting(a: Astra, b: Astra) -> bool:
+    """
+    Проверяет, находятся ли астры в соединении (с учётом орбиса).
+    """
+    orb = primal_orb
+    if not of_same_heaven(a, b) and half_orbs_for_doubles:
+        orb /= 2
+    return define_arc(a, b) <= orb
+
+
+def arrange_as_chain(astras: List[ZodiacPoint]) -> None:
+    """
+    Сортирует список астр по возрастанию зодиакальной долготы,src/astrowidja/config/settings.py
+    так чтобы наибольший промежуток был между последней и первой астрой.
+    """
+    if len(astras) <= 1:
+        return
+
+    # сортируем по зодиакальной долготе, просто чтоб шли вподряд
+    astras.sort(key=lambda x: x.zodiac_position)
+
+    # находим индекс максимальной дуги
+    max_dist = 0.0  # пусть дуга будет 0, чтобы любая другая была больше
+    index_after_max_dist = 0  # начнём с первого элемента
+
+    for i in range(len(astras)):
+        dist = define_vector_arc(astras[i - 1], astras[i])
+        if dist > max_dist:
+            max_dist = dist
+            index_after_max_dist = i
+
+    # прокручиваем список так, чтоб начинался с элемента, который index_after_max_dist
+    astras[:] = astras[index_after_max_dist:] + astras[:-index_after_max_dist]
+
+
+def get_arranged_as_chain(astras: Collection[ZodiacPoint]) -> List[ZodiacPoint]:
+    """
+    Возвращает отсортированный список астр.
+    """
+    new_list = list(astras)
+    arrange_as_chain(new_list)
+    return new_list
+
+
+def calculate_avg(*points: ZodiacPoint) -> float:
+    """
+    Вычисляет центр тяжести (среднее) для нескольких астр.
+    """
+    if len(points) == 1:
+        return points[0].zodiac_position
+
+    astras = list(points)
+    arrange_as_chain(astras)
+
+    first = astras[0]
+    total = sum(define_vector_arc(first, point) for point in astras[1:])
+    return coor(first.zodiac_position + total / len(astras))

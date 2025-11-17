@@ -1,0 +1,220 @@
+"""
+Инструментальный класс для решения задач по пространственному расположению.
+Аналог Java-класса Mechanics.
+"""
+
+from typing import Optional, List
+
+from astrowidja.model.celestial_objects import Astra, Chart
+from astrowidja.utils.celestial import CIRCLE, HALF_CIRCLE
+from astrowidja.utils.harmonix import Harmonics
+# from astrowidja.model.chart import Chart, ChartList, ChartObject
+# from astrowidja.model.astro import Astra, AstraEntity
+
+
+def degrees_to_coors(in_degrees: float) -> List[int]:
+    """
+    Преобразует десятичные градусы в градусы, минуты, секунды.
+    """
+    degrees = int(in_degrees)
+    minutes_decimal = (in_degrees - degrees) * 60
+    minutes = int(minutes_decimal)
+    seconds = int((minutes_decimal - minutes) * 60)
+    return [degrees % 360, minutes, seconds]
+
+
+def second_format(in_degrees: float, without_extra_zeros: bool = False) -> str:
+    """
+    Выдаёт строку вида градусы°минуты'секунды".
+    Если withoutExtraZeros = True, то упускаются отсутствующие секунды или минуты.
+    """
+    coors = degrees_to_coors(in_degrees)
+    deg, min_, sec = coors
+
+    parts = []
+    if without_extra_zeros:
+        if deg != 0 or (min_ == 0 and sec == 0):
+            parts.append(f"{deg}°")
+        if min_ != 0 or (not without_extra_zeros):
+            parts.append(f"{min_}'")
+        if sec != 0 or (not without_extra_zeros):
+            parts.append(f'{sec}"')
+    else:
+        parts.append(f"{deg:3d}°")
+        parts.append(f"{min_:2d}'")
+        parts.append(f'{sec:2d}"')
+
+    result = "".join(parts)
+    return result if result else "0°"
+
+
+def second_format_for_table(in_degrees: float, without_extra_zeros: bool = True) -> str:
+    """
+    Возвращает строку длиной ровно 10 символов, выровненную по левому краю.
+    """
+    coors = degrees_to_coors(in_degrees)
+    deg, min_, sec = coors
+
+    if without_extra_zeros:
+        deg_str = f"{deg}°"
+        min_str = f"{min_}'" if min_ > 0 or sec > 0 else ""
+        sec_str = f'{sec}"' if sec > 0 else ""
+    else:
+        deg_str = f"{deg:03d}°"
+        min_str = f"{min_:02d}'"
+        sec_str = f'{sec:02d}"'
+
+    combined = f"{deg_str}{min_str}{sec_str}".ljust(10)
+    return f"{combined[:10]:<10}"
+
+
+def zodiac_icon(position: float) -> str:
+    """
+    Возвращает символ зодиакального знака по позиции в эклиптике.
+    """
+    signs = "♈♉♊♋♌♍♎♏♐♑♒♓"
+    index = int(position // 30) % 12
+    return signs[index]
+
+
+def zodiac_format(position: float) -> str:
+    """
+    Преобразует эклиптическую долготу в зодиакальную строку: знак + координаты.
+    """
+    sign_icon = zodiac_icon(position)
+    zod_position = position % 30
+    formatted_arc = second_format(zod_position, without_extra_zeros=True)
+    return f"{sign_icon}\t{formatted_arc}"
+
+
+def display_multipliers(upto: int) -> None:
+    """
+    Выводит разложение чисел от 0 до `upto` на простые множители.
+    Аналог Java-метода displayMultipliers.
+    """
+    output = []
+    for i in range(upto + 1):
+        if i > 999:
+            line = f"{i} → "
+        else:
+            line = f"{i:3d} → "
+
+        multi = Harmonics.multipliers_explicate(i)
+        line += " + ".join(map(str, multi))
+        if len(multi) > 1:
+            line += f" = {sum(multi)}"
+        output.append(line)
+
+    print("\n".join(output))
+
+
+def find_median(arc1: float, arc2: float) -> float:
+    """
+    Находит среднюю дугу между двумя позициями на окружности.
+    """
+    arc = (arc1 + arc2) / 2.0
+    return arc if arc < CIRCLE else arc - CIRCLE
+
+
+def get_arc(astra1: Astra, astra2: Astra) -> float:
+    """
+    Вычисляет меньшую дугу между двумя астрами.
+    """
+    diff = abs(astra1.zodiac_position - astra2.zodiac_position)
+    return min(diff, CIRCLE - diff)
+
+
+def composite(chart_a: Chart, chart_b: Chart) -> Chart:
+    """
+    Создаёт композитную карту из двух данных карт.
+    В композите каждая астра получает среднюю координату между двумя картами.
+    Меркурий и Венера остаются в той же части неба, что и Солнце.
+    """
+    if chart_a is None or chart_b is None:
+        raise ValueError("Карта для композита не найдена")
+
+    composite_name = f"Средняя карта {chart_a.get_name()} и {chart_b.get_name()}"
+    composite = Chart(composite_name)
+
+    sun = None
+    mercury = None
+    venus = None
+
+    for astra in chart_a.get_astras():
+        counterpart = chart_b.get_astra(astra.get_name())
+        if counterpart is None:
+            continue
+
+        composite_pos = find_median(astra.get_zodiac_position(), counterpart.get_zodiac_position())
+        composite_astra = Astra(astra.get_name(), composite_pos)
+        composite.add_astra(composite_astra)
+
+        entity = AstraEntity.get_entity_by_name(composite_astra.get_name())
+        if entity:
+            if entity == AstraEntity.SOL:
+                sun = composite_astra
+            elif entity == AstraEntity.MER:
+                mercury = composite_astra
+            elif entity == AstraEntity.VEN:
+                venus = composite_astra
+
+    # Корректировка положения Меркурия и Венеры относительно Солнца
+    if sun:
+        if mercury and get_arc(sun, mercury) > 30.0:
+            mercury.advance_coordinate_by(HALF_CIRCLE)
+        if venus and get_arc(sun, venus) > 60.0:
+            venus.advance_coordinate_by(HALF_CIRCLE)
+
+    return composite
+
+
+def extend_file_name(filename: str, as_awc: bool = False) -> str:
+    """
+    Добавляет расширение .awc или .awb, если его ещё нет.
+    """
+    if not filename.endswith((".awb", ".awc")):
+        filename += ".awc" if as_awc else ".awb"
+    return filename
+
+
+def resolve_collision(
+    chart_list: ChartList,
+    controversial: ChartObject,
+    list_name: str
+) -> bool:
+    """
+    Разрешает конфликт имён при добавлении карты в список.
+    Запрашивает действие у пользователя (через input).
+    """
+    while True:
+        print(f"""
+                            Карта с именем '{controversial.get_name()}' уже есть {list_name}:
+                            1. добавить под новым именем
+                            2. заменить присутствующую в списке
+                            3. удалить старую, добавить новую в конец списка
+                            0. отмена
+        """.strip())
+
+        choice = input("> ").strip().lower()
+
+        if choice in ("1", "name"):
+            while True:
+                rename = input("Новое имя: ").strip()
+                if not chart_list.contains(rename):
+                    controversial.set_name(rename)
+                    return chart_list.add_item(controversial)
+                else:
+                    print(f"Имя '{rename}' уже занято. Попробуйте другое.")
+        elif choice in ("2", "replace"):
+            idx = chart_list.index_of(controversial.get_name())
+            if idx >= 0:
+                chart_list.set_item(idx, controversial)
+            return True
+        elif choice in ("3", "add"):
+            chart_list.remove(controversial.get_name())
+            return chart_list.add_item(controversial)
+        elif choice in ("0", "cancel"):
+            print("Отмена добавления карты:", controversial.get_name())
+            return False
+        else:
+            print("Неверный ввод. Введите 0, 1, 2 или 3.")
