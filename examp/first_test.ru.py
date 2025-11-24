@@ -4,16 +4,17 @@ from selenium.webdriver import Keys
 from selenium.webdriver.common.by import By
 import time
 # Создаем экземпляр браузера (открываем Chrome)
+driver = None
 try:
     driver = webdriver.Chrome()
-# Открываем веб-сайт
+    # Открываем веб-сайт
     driver.get("https://ya.ru/")
-# Ждем 3 секунды, чтобы страница загрузилась
+    # Ждем 3 секунды, чтобы страница загрузилась
     time.sleep(2)
-# Получаем заголовок страницы и выводим его
+    # Получаем заголовок страницы и выводим его
     element=driver.find_element(By.TAG_NAME, "textarea")
-# print(element.text)
-# Закрываем браузер
+    # print(element.text)
+    # Закрываем браузер
     element.click()
     time.sleep(2)
     element.send_keys("сОбака")
@@ -36,4 +37,3 @@ except Exception as e:
 finally:
     if driver is not None:
         driver.quit()
-driver.quit()
